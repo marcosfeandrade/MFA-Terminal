@@ -1,0 +1,77 @@
+{
+  "name": "mfa-terminal",
+  "displayName": "MFA Terminal",
+  "description": "Gerenciador de layouts de terminal para VS Code/Cursor",
+  "version": "0.2.0",
+  "publisher": "mfa",
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "terminal",
+    "layout",
+    "split",
+    "workspace",
+    "productivity"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mfa-terminal.saveLayout",
+        "title": "MFA Terminal: Salvar Layout Atual",
+        "icon": "$(save)"
+      },
+      {
+        "command": "mfa-terminal.loadLayout",
+        "title": "MFA Terminal: Carregar Layout",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "mfa-terminal.listLayouts",
+        "title": "MFA Terminal: Listar Layouts",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "mfa-terminal.createLayout",
+        "title": "MFA Terminal: Criar Novo Layout",
+        "icon": "$(add)"
+      },
+      {
+        "command": "mfa-terminal.editLayout",
+        "title": "MFA Terminal: Editar Layout",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "mfa-terminal.deleteLayout",
+        "title": "MFA Terminal: Deletar Layout",
+        "icon": "$(trash)"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "yarn run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "yarn run compile && yarn run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.105.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "eslint": "^9.36.0",
+    "typescript": "^5.9.3",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}
