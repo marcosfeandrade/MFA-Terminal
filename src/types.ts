@@ -18,6 +18,8 @@ export interface TerminalConfig {
 	icon?: string;
 	/** Cor do terminal (opcional) */
 	color?: string;
+	/** Perfil do terminal (ex: Git Bash, PowerShell, CMD, etc.) (opcional) */
+	profileName?: string;
 	/** ID do grupo ao qual este terminal pertence */
 	groupId?: number;
 	/** Índice dentro do grupo (para ordem de splits) */

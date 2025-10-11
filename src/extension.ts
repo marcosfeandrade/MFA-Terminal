@@ -561,45 +561,48 @@ async function createLayout() {
 			placeHolder: 'Ex: Terminal para desenvolvimento com frontend e backend',
 		});
 
-		// Adicionar terminais
-		const terminals: TerminalConfig[] = [];
-		let addMore = true;
+	// Adicionar terminais
+	const terminals: TerminalConfig[] = [];
+	let addMore = true;
 
-		while (addMore) {
-			const terminalName = await vscode.window.showInputBox({
-				prompt: `Terminal ${terminals.length + 1}: Digite o nome`,
-				placeHolder: 'Ex: Backend Server',
-			});
+	while (addMore) {
+		const terminalName = await vscode.window.showInputBox({
+			prompt: `Terminal ${terminals.length + 1}: Digite o nome`,
+			placeHolder: 'Ex: Backend Server',
+		});
 
-			if (!terminalName) {
-				break;
-			}
-
-			const command = await vscode.window.showInputBox({
-				prompt: `Terminal "${terminalName}": Comando a executar (opcional)`,
-				placeHolder: 'Ex: npm run dev',
-			});
-
-			const cwd = await vscode.window.showInputBox({
-				prompt: `Terminal "${terminalName}": Diretório de trabalho (opcional)`,
-				placeHolder: 'Ex: ./backend',
-			});
-
-			terminals.push({
-				name: terminalName.trim(),
-				command: command?.trim(),
-				cwd: cwd?.trim(),
-			});
-
-			const action = await vscode.window.showQuickPick(
-				['Adicionar mais um terminal', 'Finalizar'],
-				{
-					placeHolder: `${terminals.length} terminal(is) adicionado(s)`,
-				}
-			);
-
-			addMore = action === 'Adicionar mais um terminal';
+		if (!terminalName) {
+			break;
 		}
+
+		const profileName = await selectTerminalProfile();
+
+		const command = await vscode.window.showInputBox({
+			prompt: `Terminal "${terminalName}": Comando a executar (opcional)`,
+			placeHolder: 'Ex: npm run dev',
+		});
+
+		const cwd = await vscode.window.showInputBox({
+			prompt: `Terminal "${terminalName}": Diretório de trabalho (opcional)`,
+			placeHolder: 'Ex: ./backend',
+		});
+
+		terminals.push({
+			name: terminalName.trim(),
+			profileName: profileName,
+			command: command?.trim(),
+			cwd: cwd?.trim(),
+		});
+
+		const action = await vscode.window.showQuickPick(
+			['Adicionar mais um terminal', 'Finalizar'],
+			{
+				placeHolder: `${terminals.length} terminal(is) adicionado(s)`,
+			}
+		);
+
+		addMore = action === 'Adicionar mais um terminal';
+	}
 
 		if (terminals.length === 0) {
 			vscode.window.showWarningMessage('⚠️ Nenhum terminal adicionado. Layout não foi criado.');
@@ -652,8 +655,14 @@ async function organizeTerminalsIntoGroups(terminals: TerminalConfig[]): Promise
 		}];
 	}
 
-	// Mostrar os nomes dos terminais que serão organizados
-	const terminalNamesList = terminals.map((t, i) => `  ${i + 1}. ${t.name}`).join('\n');
+		// Mostrar os nomes dos terminais que serão organizados
+	const terminalNamesList = terminals.map((t, i) => {
+		let info = `  ${i + 1}. ${t.name}`;
+		if (t.profileName) {
+			info += ` [${t.profileName}]`;
+		}
+		return info;
+	}).join('\n');
 	
 	// Perguntar ao usuário como organizar
 	const organizationMethod = await vscode.window.showQuickPick(
@@ -661,13 +670,19 @@ async function organizeTerminalsIntoGroups(terminals: TerminalConfig[]): Promise
 			{
 				label: '$(layout) Cada terminal separado',
 				description: `${terminals.length} terminais independentes`,
-				detail: `Recreia: ${terminals.map(t => `[${t.name}]`).join(' ')}`,
+				detail: `Recreia: ${terminals.map(t => {
+					const profile = t.profileName ? `(${t.profileName})` : '';
+					return `[${t.name}${profile}]`;
+				}).join(' ')}`,
 				value: 'separate',
 			},
 			{
 				label: '$(split-horizontal) Todos splitados (lado a lado)',
 				description: `${terminals.length} terminais juntos`,
-				detail: `Recreia: [${terminals.map(t => t.name).join(' | ')}]`,
+				detail: `Recreia: [${terminals.map(t => {
+					const profile = t.profileName ? `(${t.profileName})` : '';
+					return `${t.name}${profile}`;
+				}).join(' | ')}]`,
 				value: 'together',
 			},
 			{
@@ -738,13 +753,19 @@ async function organizeTerminalsManually(terminals: TerminalConfig[]): Promise<T
 
 	while (availableTerminals.length > 0) {
 		// Mostrar terminais disponíveis
-		const terminalItems = availableTerminals.map((terminal, index) => ({
-			label: `$(terminal) ${terminal.name}`,
-			description: terminal.cwd || 'Terminal capturado',
-			picked: false,
-			terminal,
-			index,
-		}));
+		const terminalItems = availableTerminals.map((terminal, index) => {
+			let description = terminal.cwd || 'Terminal capturado';
+			if (terminal.profileName) {
+				description = `${terminal.profileName} | ${description}`;
+			}
+			return {
+				label: `$(terminal) ${terminal.name}`,
+				description: description,
+				picked: false,
+				terminal,
+				index,
+			};
+		});
 
 		const groupNumber = groups.length + 1;
 		const groupsCreatedInfo = groups.length > 0 
@@ -824,6 +845,69 @@ async function organizeTerminalsManually(terminals: TerminalConfig[]): Promise<T
 	}
 
 	return groups;
+}
+
+/**
+ * Obtém os perfis de terminal disponíveis
+ */
+async function getAvailableTerminalProfiles(): Promise<Array<{ label: string; profileName: string | undefined }>> {
+	// Obter perfis configurados
+	const config = vscode.workspace.getConfiguration('terminal.integrated.profiles');
+	const profiles: Array<{ label: string; profileName: string | undefined }> = [
+		{ label: '$(terminal) Padrão do Sistema', profileName: undefined }
+	];
+
+	// Detectar plataforma
+	const platform = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
+	const platformProfiles = config.get<Record<string, any>>(platform);
+
+	console.log(`🔍 Detectando perfis de terminal (Plataforma: ${platform})`);
+	
+	if (platformProfiles) {
+		console.log(`📋 Perfis encontrados:`, Object.keys(platformProfiles));
+		
+		Object.keys(platformProfiles).forEach(profileName => {
+			const profile = platformProfiles[profileName];
+			console.log(`  - ${profileName}:`, {
+				hasPath: !!profile.path,
+				hasSource: !!profile.source,
+				hasArgs: !!profile.args
+			});
+			
+			// Adicionar perfil com ícone apropriado
+			let icon = '$(terminal)';
+			if (profileName.toLowerCase().includes('powershell')) {
+				icon = '$(terminal-powershell)';
+			} else if (profileName.toLowerCase().includes('bash')) {
+				icon = '$(terminal-bash)';
+			} else if (profileName.toLowerCase().includes('cmd')) {
+				icon = '$(terminal-cmd)';
+			}
+			
+			profiles.push({
+				label: `${icon} ${profileName}`,
+				profileName: profileName
+			});
+		});
+	} else {
+		console.log(`⚠️ Nenhum perfil encontrado para a plataforma ${platform}`);
+	}
+
+	return profiles;
+}
+
+/**
+ * Permite ao usuário selecionar um perfil de terminal
+ */
+async function selectTerminalProfile(): Promise<string | undefined> {
+	const profiles = await getAvailableTerminalProfiles();
+	
+	const selected = await vscode.window.showQuickPick(profiles, {
+		placeHolder: 'Selecione o perfil do terminal (opcional)',
+		title: 'Perfil do Terminal'
+	});
+
+	return selected?.profileName;
 }
 
 /**

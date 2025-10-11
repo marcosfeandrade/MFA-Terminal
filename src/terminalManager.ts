@@ -101,6 +101,89 @@ export class TerminalManager {
 	 * Cria um terminal simples sem split (usado para o primeiro terminal do grupo)
 	 */
 	private async createTerminalSimple(config: TerminalConfig): Promise<vscode.Terminal> {
+		let terminal: vscode.Terminal;
+
+		// Se um perfil foi especificado, criar terminal com esse perfil
+		if (config.profileName) {
+			console.log(`🎯 Tentando criar terminal "${config.name}" com perfil "${config.profileName}"`);
+			
+			// Usar comando interno do VS Code para criar terminal com perfil
+			// Isso garante que o perfil seja aplicado corretamente
+			const terminalCountBefore = vscode.window.terminals.length;
+			
+			try {
+				// Primeiro, definir o perfil padrão temporariamente
+				const platform = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
+				const defaultProfileKey = `terminal.integrated.defaultProfile.${platform}`;
+				const currentDefault = vscode.workspace.getConfiguration().get(defaultProfileKey);
+				
+				console.log(`📝 Perfil padrão atual: ${currentDefault}`);
+				console.log(`🔄 Alterando perfil padrão temporariamente para: ${config.profileName}`);
+				
+				// Alterar perfil padrão temporariamente
+				await vscode.workspace.getConfiguration().update(
+					defaultProfileKey,
+					config.profileName,
+					vscode.ConfigurationTarget.Global
+				);
+				
+				await this.delay(100);
+				
+				// Criar terminal com perfil
+				const terminalOptions: vscode.TerminalOptions = {
+					name: config.name,
+					env: config.env,
+				};
+				
+				// Adicionar cwd se especificado
+				if (config.cwd) {
+					const resolvedPath = this.resolvePath(config.cwd);
+					if (resolvedPath && fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory()) {
+						terminalOptions.cwd = resolvedPath;
+					}
+				}
+				
+				console.log(`✅ Criando terminal com opções:`, terminalOptions);
+				terminal = vscode.window.createTerminal(terminalOptions);
+				
+				await this.delay(200);
+				
+				// Restaurar perfil padrão original
+				console.log(`🔙 Restaurando perfil padrão para: ${currentDefault || 'null'}`);
+				await vscode.workspace.getConfiguration().update(
+					defaultProfileKey,
+					currentDefault,
+					vscode.ConfigurationTarget.Global
+				);
+				
+				console.log(`✅ Terminal criado com sucesso!`);
+				
+			} catch (error) {
+				console.error(`❌ Erro ao criar terminal com perfil:`, error);
+				vscode.window.showWarningMessage(
+					`⚠️ Erro ao criar terminal "${config.name}" com perfil "${config.profileName}". Usando perfil padrão.`
+				);
+				// Fallback para criar sem perfil
+				terminal = await this.createTerminalWithoutProfile(config);
+			}
+		} else {
+			// Criar terminal sem perfil específico (usa o padrão)
+			terminal = await this.createTerminalWithoutProfile(config);
+		}
+		
+		// Executar comando se especificado
+		if (config.command) {
+			await this.delay(500);
+			terminal.sendText(config.command);
+		}
+
+		return terminal;
+	}
+
+	/**
+	 * Cria um terminal sem perfil específico (usa configurações padrão)
+	 */
+	private async createTerminalWithoutProfile(config: TerminalConfig): Promise<vscode.Terminal> {
 		const terminalOptions: vscode.TerminalOptions = {
 			name: config.name,
 			env: config.env,
@@ -121,16 +204,7 @@ export class TerminalManager {
 			}
 		}
 
-		// Criar o terminal
-		const terminal = vscode.window.createTerminal(terminalOptions);
-		
-		// Executar comando se especificado
-		if (config.command) {
-			await this.delay(500);
-			terminal.sendText(config.command);
-		}
-
-		return terminal;
+		return vscode.window.createTerminal(terminalOptions);
 	}
 
 	/**
@@ -204,6 +278,21 @@ export class TerminalManager {
 		}
 
 		return terminal;
+	}
+
+	/**
+	 * Resolve variáveis de ambiente em um caminho
+	 * Ex: ${env:windir}\\System32 -> C:\\Windows\\System32
+	 */
+	private resolveEnvVars(pathStr: string): string {
+		if (!pathStr) {
+			return pathStr;
+		}
+
+		// Substituir variáveis de ambiente no formato ${env:VAR}
+		return pathStr.replace(/\$\{env:([^}]+)\}/gi, (_, varName) => {
+			return process.env[varName] || '';
+		});
 	}
 
 	/**
