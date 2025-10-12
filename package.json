@@ -4,7 +4,7 @@
   "description": "Terminal layout manager for VS Code/Cursor",
   "version": "0.1.0",
   "publisher": "marcosfeandrade",
-  "icon": "icon.svg",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.105.0"
   },
