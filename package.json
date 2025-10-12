@@ -2,8 +2,8 @@
   "name": "mfa-terminal",
   "displayName": "MFA Terminal",
   "description": "Terminal layout manager for VS Code/Cursor",
-  "version": "0.2.0",
-  "publisher": "mfa",
+  "version": "0.1.0",
+  "publisher": "marcosfeandrade",
   "engines": {
     "vscode": "^1.105.0"
   },

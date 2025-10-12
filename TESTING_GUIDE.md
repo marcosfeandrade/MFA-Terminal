@@ -25,6 +25,7 @@
 8. **Adicione descrição**: "Frontend e Backend lado a lado, Database separado"
 
 #### Resultado Esperado:
+
 - Mensagem: "✅ Perfil 'Dev Full Stack' criado! 3 terminal(is) em 2 grupos."
 
 ### Teste 2: Carregar Perfil com Splits
@@ -37,6 +38,7 @@
 4. **Escolha**: "Manter terminais existentes" ou "Fechar terminais existentes"
 
 #### Resultado Esperado:
+
 - **Grupo 1**: Frontend e Backend devem aparecer lado a lado (splitados)
 - **Grupo 2**: Database deve aparecer em um painel separado
 - Mensagem: "✅ Perfil 'Dev Full Stack' aplicado! 3 terminal(is) em 2 grupos."
@@ -48,13 +50,14 @@
 1. **Abra 2 terminais manualmente**
 2. **Abra a paleta de comandos**: `Ctrl+Shift+P`
 3. **Execute**: `MFA Terminal: Salvar Perfil Atual`
-4. **Escolha organização**: 
+4. **Escolha organização**:
    - Opção A: "Cada terminal em seu próprio grupo" (2 terminais separados)
    - Opção B: "Todos splitados em um grupo" (2 terminais lado a lado)
    - Opção C: "Organizar manualmente" (você escolhe)
 5. **Digite o nome e descrição**
 
 #### Resultado Esperado:
+
 - Perfil salvo com a estrutura escolhida
 - Ao carregar novamente, deve manter a mesma organização
 
@@ -105,6 +108,7 @@ Resultado Visual:
 5. **Reorganize** usando a interface de grupos
 
 #### Resultado Esperado:
+
 - Perfil atualizado com novo layout
 - Ao carregar, deve usar o novo layout
 
@@ -116,6 +120,7 @@ Resultado Visual:
 2. **Observe**: Cada perfil mostra "X terminal(is) em Y grupos"
 
 #### Resultado Esperado:
+
 - Informação clara sobre estrutura de cada perfil
 - Exemplo: "3 terminal(is) em 2 grupos"
 
@@ -124,6 +129,7 @@ Resultado Visual:
 Se você tinha perfis da versão 0.1.x:
 
 #### Resultado Esperado:
+
 - Perfis antigos continuam funcionando
 - São automaticamente migrados para o formato novo
 - Todos os terminais ficam em um único grupo (sem splits)
@@ -146,21 +152,22 @@ Se você tinha perfis da versão 0.1.x:
 Se encontrar problemas:
 
 1. **Terminais não aparecem splitados**:
+
    - Verifique se o perfil tem múltiplos terminais no mesmo grupo
    - Recarregue a janela do VS Code (`Developer: Reload Window`)
-
 2. **Erro ao carregar perfil antigo**:
+
    - Perfis antigos devem ser migrados automaticamente
    - Se não funcionar, delete e recrie o perfil
-
 3. **Interface de organização não aparece**:
+
    - Certifique-se de que tem mais de 1 terminal
    - Com 1 terminal, automaticamente cria 1 grupo
 
 ## 📝 Feedback
 
 Após os testes, documente:
+
 - ✅ O que funcionou perfeitamente
 - ⚠️ O que precisa de ajustes
 - 💡 Sugestões de melhorias
-
