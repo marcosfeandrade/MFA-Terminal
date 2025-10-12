@@ -1,5 +1,5 @@
 /**
- * Gerenciador de terminais
+ * Terminal manager
  */
 
 import * as vscode from 'vscode';
@@ -8,85 +8,85 @@ import * as fs from 'fs';
 import { TerminalLayout, TerminalConfig, TerminalGroup } from './types';
 
 /**
- * Gerenciador de criação e controle de terminais
+ * Terminal creation and control manager
  */
 export class TerminalManager {
 	/**
-	 * Aplica um layout de terminal, criando os terminais configurados com seus grupos
+	 * Applies a terminal layout, creating configured terminals with their groups
 	 */
 	async applyLayout(layout: TerminalLayout, closeExisting: boolean = false): Promise<void> {
-		console.log('🚀 Aplicando layout:', layout.name);
-		console.log('📊 Grupos no layout:', layout.groups);
+		console.log('🚀 Applying layout:', layout.name);
+		console.log('📊 Groups in layout:', layout.groups);
 		
-		// Fechar terminais existentes se solicitado
+		// Close existing terminals if requested
 		if (closeExisting) {
 			this.closeAllTerminals();
 		}
 
-		// Contador total de terminais
+		// Total terminal counter
 		let totalTerminals = 0;
 
-		// Criar cada grupo de terminais
+		// Create each terminal group
 		for (let i = 0; i < layout.groups.length; i++) {
 			const group = layout.groups[i];
-			console.log(`📁 Criando grupo ${i + 1}:`, group.terminals.map(t => t.name));
+			console.log(`📁 Creating group ${i + 1}:`, group.terminals.map(t => t.name));
 			await this.createTerminalGroup(group);
 			totalTerminals += group.terminals.length;
 		}
 
-		// Mostrar mensagem de sucesso
+		// Show success message
 		const groupsInfo = layout.groups.length === 1 
-			? '1 grupo' 
-			: `${layout.groups.length} grupos`;
+			? '1 group' 
+			: `${layout.groups.length} groups`;
 		
 		vscode.window.showInformationMessage(
-			`✅ Layout "${layout.name}" aplicado! ${totalTerminals} terminal(is) em ${groupsInfo}.`
+			`✅ Layout "${layout.name}" applied! ${totalTerminals} terminal(s) in ${groupsInfo}.`
 		);
 	}
 
 	/**
-	 * Cria um grupo de terminais (terminais splitados juntos)
+	 * Creates a terminal group (split terminals together)
 	 */
 	private async createTerminalGroup(group: TerminalGroup): Promise<void> {
 		if (group.terminals.length === 0) {
 			return;
 		}
 
-		// Criar primeiro terminal do grupo
-		console.log(`  🔨 Criando terminal 1/${group.terminals.length}: "${group.terminals[0].name}"`);
+		// Create first terminal in group
+		console.log(`  🔨 Creating terminal 1/${group.terminals.length}: "${group.terminals[0].name}"`);
 		const firstTerminal = await this.createTerminalSimple(group.terminals[0]);
 		
-		// Mostrar o terminal para garantir que está ativo
+		// Show terminal to ensure it's active
 		firstTerminal.show();
 		await this.delay(500);
 
-		// Para cada terminal adicional, fazer split
+		// For each additional terminal, split
 		for (let i = 1; i < group.terminals.length; i++) {
 			const terminalConfig = group.terminals[i];
-			console.log(`  🔨 Criando terminal ${i + 1}/${group.terminals.length}: "${terminalConfig.name}"`);
-			console.log(`    ↪️ Tentando split com "${firstTerminal.name}"`);
+			console.log(`  🔨 Creating terminal ${i + 1}/${group.terminals.length}: "${terminalConfig.name}"`);
+			console.log(`    ↪️ Attempting split with "${firstTerminal.name}"`);
 			
-			// Focar no primeiro terminal antes de fazer split
+			// Focus on first terminal before splitting
 			firstTerminal.show();
 			await this.delay(200);
 			
-			// Executar comando de split
+			// Execute split command
 			await vscode.commands.executeCommand('workbench.action.terminal.split');
 			await this.delay(300);
 			
-			// O terminal splitado é o último terminal ativo
+			// The split terminal is the last active terminal
 			const terminals = vscode.window.terminals;
 			const newTerminal = terminals[terminals.length - 1];
 			
 			if (newTerminal) {
-				console.log(`    ✅ Terminal splitado criado, renomeando para "${terminalConfig.name}"`);
+				console.log(`    ✅ Split terminal created, renaming to "${terminalConfig.name}"`);
 				
-				// Renomear o terminal
+				// Rename terminal
 				await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
 					name: terminalConfig.name
 				});
 				
-				// Executar comando se especificado
+				// Execute command if specified
 				if (terminalConfig.command) {
 					await this.delay(300);
 					newTerminal.sendText(terminalConfig.command);
@@ -98,29 +98,29 @@ export class TerminalManager {
 	}
 
 	/**
-	 * Cria um terminal simples sem split (usado para o primeiro terminal do grupo)
+	 * Creates a simple terminal without split (used for the first terminal in the group)
 	 */
 	private async createTerminalSimple(config: TerminalConfig): Promise<vscode.Terminal> {
 		let terminal: vscode.Terminal;
 
-		// Se um perfil foi especificado, criar terminal com esse perfil
+		// If a profile was specified, create terminal with that profile
 		if (config.profileName) {
-			console.log(`🎯 Tentando criar terminal "${config.name}" com perfil "${config.profileName}"`);
+			console.log(`🎯 Attempting to create terminal "${config.name}" with profile "${config.profileName}"`);
 			
-			// Usar comando interno do VS Code para criar terminal com perfil
-			// Isso garante que o perfil seja aplicado corretamente
+			// Use VS Code internal command to create terminal with profile
+			// This ensures the profile is applied correctly
 			const terminalCountBefore = vscode.window.terminals.length;
 			
 			try {
-				// Primeiro, definir o perfil padrão temporariamente
+				// First, temporarily set the default profile
 				const platform = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
 				const defaultProfileKey = `terminal.integrated.defaultProfile.${platform}`;
 				const currentDefault = vscode.workspace.getConfiguration().get(defaultProfileKey);
 				
-				console.log(`📝 Perfil padrão atual: ${currentDefault}`);
-				console.log(`🔄 Alterando perfil padrão temporariamente para: ${config.profileName}`);
+				console.log(`📝 Current default profile: ${currentDefault}`);
+				console.log(`🔄 Temporarily changing default profile to: ${config.profileName}`);
 				
-				// Alterar perfil padrão temporariamente
+				// Temporarily change default profile
 				await vscode.workspace.getConfiguration().update(
 					defaultProfileKey,
 					config.profileName,
@@ -129,13 +129,13 @@ export class TerminalManager {
 				
 				await this.delay(100);
 				
-				// Criar terminal com perfil
+				// Create terminal with profile
 				const terminalOptions: vscode.TerminalOptions = {
 					name: config.name,
 					env: config.env,
 				};
 				
-				// Adicionar cwd se especificado
+				// Add cwd if specified
 				if (config.cwd) {
 					const resolvedPath = this.resolvePath(config.cwd);
 					if (resolvedPath && fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory()) {
@@ -143,35 +143,35 @@ export class TerminalManager {
 					}
 				}
 				
-				console.log(`✅ Criando terminal com opções:`, terminalOptions);
+				console.log(`✅ Creating terminal with options:`, terminalOptions);
 				terminal = vscode.window.createTerminal(terminalOptions);
 				
 				await this.delay(200);
 				
-				// Restaurar perfil padrão original
-				console.log(`🔙 Restaurando perfil padrão para: ${currentDefault || 'null'}`);
+				// Restore original default profile
+				console.log(`🔙 Restoring default profile to: ${currentDefault || 'null'}`);
 				await vscode.workspace.getConfiguration().update(
 					defaultProfileKey,
 					currentDefault,
 					vscode.ConfigurationTarget.Global
 				);
 				
-				console.log(`✅ Terminal criado com sucesso!`);
+				console.log(`✅ Terminal created successfully!`);
 				
 			} catch (error) {
-				console.error(`❌ Erro ao criar terminal com perfil:`, error);
+				console.error(`❌ Error creating terminal with profile:`, error);
 				vscode.window.showWarningMessage(
-					`⚠️ Erro ao criar terminal "${config.name}" com perfil "${config.profileName}". Usando perfil padrão.`
+					`⚠️ Error creating terminal "${config.name}" with profile "${config.profileName}". Using default profile.`
 				);
-				// Fallback para criar sem perfil
+				// Fallback to create without profile
 				terminal = await this.createTerminalWithoutProfile(config);
 			}
 		} else {
-			// Criar terminal sem perfil específico (usa o padrão)
+			// Create terminal without specific profile (uses default)
 			terminal = await this.createTerminalWithoutProfile(config);
 		}
 		
-		// Executar comando se especificado
+		// Execute command if specified
 		if (config.command) {
 			await this.delay(500);
 			terminal.sendText(config.command);
@@ -181,7 +181,7 @@ export class TerminalManager {
 	}
 
 	/**
-	 * Cria um terminal sem perfil específico (usa configurações padrão)
+	 * Creates a terminal without specific profile (uses default settings)
 	 */
 	private async createTerminalWithoutProfile(config: TerminalConfig): Promise<vscode.Terminal> {
 		const terminalOptions: vscode.TerminalOptions = {
@@ -189,7 +189,7 @@ export class TerminalManager {
 			env: config.env,
 		};
 
-		// Resolver e validar o diretório de trabalho
+		// Resolve and validate working directory
 		if (config.cwd) {
 			const resolvedPath = this.resolvePath(config.cwd);
 			
@@ -198,7 +198,7 @@ export class TerminalManager {
 					terminalOptions.cwd = resolvedPath;
 				} else {
 					vscode.window.showErrorMessage(
-						`⚠️ Terminal "${config.name}": Diretório "${config.cwd}" não existe.`
+						`⚠️ Terminal "${config.name}": Directory "${config.cwd}" does not exist.`
 					);
 				}
 			}
@@ -208,10 +208,10 @@ export class TerminalManager {
 	}
 
 	/**
-	 * Cria um único terminal com base na configuração
-	 * @param config Configuração do terminal
-	 * @param parentTerminal Terminal pai para fazer split (opcional)
-	 * @deprecated Usar createTerminalSimple ao invés
+	 * Creates a single terminal based on configuration
+	 * @param config Terminal configuration
+	 * @param parentTerminal Parent terminal for splitting (optional)
+	 * @deprecated Use createTerminalSimple instead
 	 */
 	private async createTerminal(config: TerminalConfig, parentTerminal?: vscode.Terminal): Promise<vscode.Terminal> {
 		const terminalOptions: vscode.TerminalOptions = {
@@ -219,42 +219,42 @@ export class TerminalManager {
 			env: config.env,
 		};
 
-		// Resolver e validar o diretório de trabalho
+		// Resolve and validate working directory
 		if (config.cwd) {
 			const resolvedPath = this.resolvePath(config.cwd);
 			
 			if (resolvedPath) {
-				// Verificar se o diretório existe
+				// Check if directory exists
 				if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory()) {
 					terminalOptions.cwd = resolvedPath;
 				} else {
-					// Mostrar erro e não criar o terminal com cwd inválido
+					// Show error and don't create terminal with invalid cwd
 					vscode.window.showErrorMessage(
-						`⚠️ Terminal "${config.name}": Diretório "${config.cwd}" não existe. O terminal será criado no diretório padrão.`
+						`⚠️ Terminal "${config.name}": Directory "${config.cwd}" does not exist. Terminal will be created in default directory.`
 					);
-					// Não adicionar o cwd, deixar o terminal usar o padrão
+					// Don't add cwd, let terminal use default
 				}
 			}
 		}
 
-		// Adicionar ícone se especificado
+		// Add icon if specified
 		if (config.icon) {
 			terminalOptions.iconPath = new vscode.ThemeIcon(config.icon);
 		}
 
-		// Adicionar cor se especificado
+		// Add color if specified
 		if (config.color) {
 			terminalOptions.color = new vscode.ThemeColor(config.color);
 		}
 
-		// Se há um terminal pai, fazer split
+		// If there's a parent terminal, split
 		if (parentTerminal) {
-			console.log(`      🔗 Configurando location com parentTerminal: "${parentTerminal.name}"`);
+			console.log(`      🔗 Setting location with parentTerminal: "${parentTerminal.name}"`);
 			terminalOptions.location = { parentTerminal: parentTerminal };
 		}
 
-		// Criar o terminal
-		console.log(`      ⚙️ Criando terminal com opções:`, {
+		// Create terminal
+		console.log(`      ⚙️ Creating terminal with options:`, {
 			name: terminalOptions.name,
 			hasLocation: !!terminalOptions.location,
 			hasCwd: !!terminalOptions.cwd,
@@ -262,17 +262,17 @@ export class TerminalManager {
 		
 		const terminal = vscode.window.createTerminal(terminalOptions);
 		
-		console.log(`      ✅ Terminal criado: "${terminal.name}"`);
+		console.log(`      ✅ Terminal created: "${terminal.name}"`);
 
-		// Mostrar o terminal para garantir que seja renderizado
+		// Show terminal to ensure it's rendered
 		if (!parentTerminal) {
-			// Apenas mostrar o primeiro terminal do grupo
-			terminal.show(false); // false = não roubar o foco
+			// Only show the first terminal in the group
+			terminal.show(false); // false = don't steal focus
 		}
 
-		// Executar comando se especificado
+		// Execute command if specified
 		if (config.command) {
-			// Aguardar um pouco para o terminal inicializar
+			// Wait a bit for terminal to initialize
 			await this.delay(500);
 			terminal.sendText(config.command);
 		}
@@ -281,7 +281,7 @@ export class TerminalManager {
 	}
 
 	/**
-	 * Resolve variáveis de ambiente em um caminho
+	 * Resolves environment variables in a path
 	 * Ex: ${env:windir}\\System32 -> C:\\Windows\\System32
 	 */
 	private resolveEnvVars(pathStr: string): string {
@@ -289,46 +289,46 @@ export class TerminalManager {
 			return pathStr;
 		}
 
-		// Substituir variáveis de ambiente no formato ${env:VAR}
+		// Replace environment variables in ${env:VAR} format
 		return pathStr.replace(/\$\{env:([^}]+)\}/gi, (_, varName) => {
 			return process.env[varName] || '';
 		});
 	}
 
 	/**
-	 * Resolve um caminho relativo ou absoluto em relação ao workspace
+	 * Resolves a relative or absolute path in relation to the workspace
 	 */
 	private resolvePath(pathStr: string): string | undefined {
-		// Se for caminho absoluto, retornar diretamente
+		// If absolute path, return directly
 		if (path.isAbsolute(pathStr)) {
 			return pathStr;
 		}
 
-		// Tentar resolver em relação ao workspace atual
+		// Try to resolve in relation to current workspace
 		const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 		
 		if (workspaceFolder) {
 			return path.resolve(workspaceFolder.uri.fsPath, pathStr);
 		}
 
-		// Se não houver workspace, mostrar aviso
+		// If no workspace, show warning
 		vscode.window.showWarningMessage(
-			'⚠️ Nenhum workspace aberto. Não é possível resolver caminhos relativos.'
+			'⚠️ No workspace open. Cannot resolve relative paths.'
 		);
 		
 		return undefined;
 	}
 
 	/**
-	 * Captura o layout atual de terminais
-	 * Retorna uma estrutura de grupos com os terminais
-	 * Nota: A API do VS Code não expõe informações de grupos diretamente,
-	 * então retornamos todos os terminais em um único grupo
+	 * Captures the current terminal layout
+	 * Returns a structure of groups with terminals
+	 * Note: VS Code API does not expose group information directly,
+	 * so we return all terminals in a single group
 	 */
 	captureCurrentLayout(): TerminalGroup[] {
 		const terminals = vscode.window.terminals;
 		
-		console.log('📊 Total de terminais no VS Code:', terminals.length);
+		console.log('📊 Total terminals in VS Code:', terminals.length);
 		
 		const terminalConfigs: TerminalConfig[] = terminals.map((terminal, index) => {
 			console.log(`  Terminal ${index + 1}: "${terminal.name}"`);
@@ -337,17 +337,17 @@ export class TerminalManager {
 				name: terminal.name,
 			};
 
-			// Nota: Infelizmente, a API do VS Code não permite ler
-			// o diretório atual, comandos executados ou variáveis de ambiente
-			// de terminais existentes. Estes precisam ser configurados manualmente.
+			// Note: Unfortunately, the VS Code API does not allow reading
+			// the current directory, executed commands, or environment variables
+			// from existing terminals. These need to be configured manually.
 
 			return config;
 		});
 
-		console.log('✅ Terminais capturados:', terminalConfigs.length);
+		console.log('✅ Terminals captured:', terminalConfigs.length);
 
-		// Retornar todos em um único grupo
-		// O usuário poderá reorganizar manualmente depois
+		// Return all in a single group
+		// User can reorganize manually later
 		return [{
 			id: 0,
 			terminals: terminalConfigs,
@@ -355,7 +355,7 @@ export class TerminalManager {
 	}
 
 	/**
-	 * Fecha todos os terminais abertos
+	 * Closes all open terminals
 	 */
 	private closeAllTerminals(): void {
 		const terminals = vscode.window.terminals;
@@ -363,14 +363,14 @@ export class TerminalManager {
 	}
 
 	/**
-	 * Aguarda um tempo especificado
+	 * Waits for a specified time
 	 */
 	private delay(ms: number): Promise<void> {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
 
 	/**
-	 * Obtém o número de terminais abertos
+	 * Gets the number of open terminals
 	 */
 	getOpenTerminalsCount(): number {
 		return vscode.window.terminals.length;

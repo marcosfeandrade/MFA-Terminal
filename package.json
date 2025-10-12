@@ -1,7 +1,7 @@
 {
   "name": "mfa-terminal",
   "displayName": "MFA Terminal",
-  "description": "Gerenciador de layouts de terminal para VS Code/Cursor",
+  "description": "Terminal layout manager for VS Code/Cursor",
   "version": "0.2.0",
   "publisher": "mfa",
   "engines": {
@@ -25,32 +25,32 @@
     "commands": [
       {
         "command": "mfa-terminal.saveLayout",
-        "title": "MFA Terminal: Salvar Layout Atual",
+        "title": "MFA Terminal: Save Current Layout",
         "icon": "$(save)"
       },
       {
         "command": "mfa-terminal.loadLayout",
-        "title": "MFA Terminal: Carregar Layout",
+        "title": "MFA Terminal: Load Layout",
         "icon": "$(folder-opened)"
       },
       {
         "command": "mfa-terminal.listLayouts",
-        "title": "MFA Terminal: Listar Layouts",
+        "title": "MFA Terminal: List Layouts",
         "icon": "$(list-unordered)"
       },
       {
         "command": "mfa-terminal.createLayout",
-        "title": "MFA Terminal: Criar Novo Layout",
+        "title": "MFA Terminal: Create New Layout",
         "icon": "$(add)"
       },
       {
         "command": "mfa-terminal.editLayout",
-        "title": "MFA Terminal: Editar Layout",
+        "title": "MFA Terminal: Edit Layout",
         "icon": "$(edit)"
       },
       {
         "command": "mfa-terminal.deleteLayout",
-        "title": "MFA Terminal: Deletar Layout",
+        "title": "MFA Terminal: Delete Layout",
         "icon": "$(trash)"
       }
     ]

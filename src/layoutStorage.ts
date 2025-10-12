@@ -1,5 +1,5 @@
 /**
- * Serviço de armazenamento de layouts de terminal
+ * Terminal layout storage service
  */
 
 import * as vscode from 'vscode';
@@ -9,13 +9,13 @@ const STORAGE_VERSION = '2.0.0';
 const STORAGE_KEY = 'mfa-terminal.layouts';
 
 /**
- * Gerenciador de armazenamento de layouts
+ * Layout storage manager
  */
 export class LayoutStorageService {
 	constructor(private context: vscode.ExtensionContext) {}
 
 	/**
-	 * Obtém todos os layouts salvos
+	 * Gets all saved layouts
 	 */
 	async getAllLayouts(): Promise<TerminalLayout[]> {
 		const storage = await this.getStorage();
@@ -23,7 +23,7 @@ export class LayoutStorageService {
 	}
 
 	/**
-	 * Obtém um layout específico por ID
+	 * Gets a specific layout by ID
 	 */
 	async getLayout(id: string): Promise<TerminalLayout | undefined> {
 		const storage = await this.getStorage();
@@ -32,7 +32,7 @@ export class LayoutStorageService {
 	}
 
 	/**
-	 * Salva um novo layout
+	 * Saves a new layout
 	 */
 	async saveLayout(layout: TerminalLayout): Promise<void> {
 		const storage = await this.getStorage();
@@ -41,20 +41,20 @@ export class LayoutStorageService {
 	}
 
 	/**
-	 * Atualiza um layout existente
+	 * Updates an existing layout
 	 */
 	async updateLayout(id: string, updates: Partial<TerminalLayout>): Promise<void> {
 		const storage = await this.getStorage();
 		const existingLayout = storage.layouts[id];
 		
 		if (!existingLayout) {
-			throw new Error(`Layout com ID ${id} não encontrado`);
+			throw new Error(`Layout with ID ${id} not found`);
 		}
 
 		const updatedLayout: TerminalLayout = {
 			...this.deserializeLayout(existingLayout),
 			...updates,
-			id, // Garantir que o ID não mude
+			id, // Ensure ID doesn't change
 			updatedAt: new Date(),
 		};
 
@@ -63,7 +63,7 @@ export class LayoutStorageService {
 	}
 
 	/**
-	 * Remove um layout
+	 * Removes a layout
 	 */
 	async deleteLayout(id: string): Promise<boolean> {
 		const storage = await this.getStorage();
@@ -78,7 +78,7 @@ export class LayoutStorageService {
 	}
 
 	/**
-	 * Verifica se existe um layout com o nome especificado
+	 * Checks if a layout with the specified name exists
 	 */
 	async layoutNameExists(name: string, excludeId?: string): Promise<boolean> {
 		const layouts = await this.getAllLayouts();
@@ -86,7 +86,7 @@ export class LayoutStorageService {
 	}
 
 	/**
-	 * Obtém o armazenamento completo
+	 * Gets the complete storage
 	 */
 	private async getStorage(): Promise<LayoutStorage> {
 		const data = await this.context.globalState.get<LayoutStorage>(STORAGE_KEY);
@@ -102,14 +102,14 @@ export class LayoutStorageService {
 	}
 
 	/**
-	 * Salva o armazenamento completo
+	 * Saves the complete storage
 	 */
 	private async setStorage(storage: LayoutStorage): Promise<void> {
 		await this.context.globalState.update(STORAGE_KEY, storage);
 	}
 
 	/**
-	 * Serializa um layout para armazenamento
+	 * Serializes a layout for storage
 	 */
 	private serializeLayout(layout: TerminalLayout): any {
 		return {
@@ -120,13 +120,13 @@ export class LayoutStorageService {
 	}
 
 	/**
-	 * Deserializa um layout do armazenamento
-	 * Suporta migração de layouts antigos (v1) para o novo formato (v2)
+	 * Deserializes a layout from storage
+	 * Supports migration of old layouts (v1) to new format (v2)
 	 */
 	private deserializeLayout(layout: any): TerminalLayout {
-		// Verificar se é um layout antigo (sem grupos)
+		// Check if it's an old layout (without groups)
 		if (layout.terminals && !layout.groups) {
-			// Migrar layout antigo para o novo formato
+			// Migrate old layout to new format
 			const group: TerminalGroup = {
 				id: 0,
 				terminals: layout.terminals,
@@ -142,7 +142,7 @@ export class LayoutStorageService {
 			};
 		}
 
-		// Layout no formato novo
+		// Layout in new format
 		return {
 			...layout,
 			createdAt: new Date(layout.createdAt),

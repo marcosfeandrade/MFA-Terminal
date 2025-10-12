@@ -1,61 +1,61 @@
 /**
- * Tipos e interfaces para a extensão MFA Terminal
+ * Types and interfaces for the MFA Terminal extension
  */
 
 /**
- * Configuração individual de um terminal
+ * Individual terminal configuration
  */
 export interface TerminalConfig {
-	/** Nome do terminal */
+	/** Terminal name */
 	name: string;
-	/** Diretório de trabalho (opcional) */
+	/** Working directory (optional) */
 	cwd?: string;
-	/** Comando a ser executado após abrir o terminal (opcional) */
+	/** Command to be executed after opening the terminal (optional) */
 	command?: string;
-	/** Variáveis de ambiente (opcional) */
+	/** Environment variables (optional) */
 	env?: { [key: string]: string };
-	/** Ícone do terminal (opcional) */
+	/** Terminal icon (optional) */
 	icon?: string;
-	/** Cor do terminal (opcional) */
+	/** Terminal color (optional) */
 	color?: string;
-	/** Perfil do terminal (ex: Git Bash, PowerShell, CMD, etc.) (opcional) */
+	/** Terminal profile (ex: Git Bash, PowerShell, CMD, etc.) (optional) */
 	profileName?: string;
-	/** ID do grupo ao qual este terminal pertence */
+	/** ID of the group this terminal belongs to */
 	groupId?: number;
-	/** Índice dentro do grupo (para ordem de splits) */
+	/** Index within the group (for split order) */
 	indexInGroup?: number;
 }
 
 /**
- * Grupo de terminais (terminais splitados juntos)
+ * Terminal group (split terminals together)
  */
 export interface TerminalGroup {
-	/** ID único do grupo */
+	/** Unique group ID */
 	id: number;
-	/** Terminais neste grupo */
+	/** Terminals in this group */
 	terminals: TerminalConfig[];
 }
 
 /**
- * Layout de terminal
+ * Terminal layout
  */
 export interface TerminalLayout {
-	/** Identificador único do layout */
+	/** Unique layout identifier */
 	id: string;
-	/** Nome do layout */
+	/** Layout name */
 	name: string;
-	/** Descrição do layout (opcional) */
+	/** Layout description (optional) */
 	description?: string;
-	/** Grupos de terminais (cada grupo representa terminais splitados) */
+	/** Terminal groups (each group represents split terminals) */
 	groups: TerminalGroup[];
-	/** Data de criação */
+	/** Creation date */
 	createdAt: Date;
-	/** Data da última modificação */
+	/** Last modification date */
 	updatedAt: Date;
 }
 
 /**
- * Compatibilidade com layouts antigos (sem grupos)
+ * Compatibility with old layouts (without groups)
  */
 export interface LegacyTerminalLayout {
 	id: string;
@@ -67,12 +67,12 @@ export interface LegacyTerminalLayout {
 }
 
 /**
- * Armazenamento de layouts
+ * Layout storage
  */
 export interface LayoutStorage {
-	/** Versão do formato de armazenamento */
+	/** Storage format version */
 	version: string;
-	/** Mapa de layouts por ID */
+	/** Layout map by ID */
 	layouts: { [id: string]: TerminalLayout };
 }
 

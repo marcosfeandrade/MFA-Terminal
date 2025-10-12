@@ -1,5 +1,5 @@
 /**
- * Extensão MFA Terminal - Gerenciador de Layouts de Terminal
+ * MFA Terminal Extension - Terminal Layout Manager
  */
 
 import * as vscode from 'vscode';
@@ -12,16 +12,16 @@ let storageService: LayoutStorageService;
 let terminalManager: TerminalManager;
 
 /**
- * Ativa a extensão
+ * Activates the extension
  */
 export function activate(context: vscode.ExtensionContext) {
-	console.log('✨ Extensão MFA Terminal ativada!');
+	console.log('✨ MFA Terminal extension activated!');
 
-	// Inicializar serviços
+	// Initialize services
 	storageService = new LayoutStorageService(context);
 	terminalManager = new TerminalManager();
 
-	// Registrar comandos
+	// Register commands
 	context.subscriptions.push(
 		vscode.commands.registerCommand('mfa-terminal.saveLayout', saveLayout),
 		vscode.commands.registerCommand('mfa-terminal.loadLayout', loadLayout),
@@ -33,43 +33,43 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 /**
- * Salva o layout atual de terminais
+ * Saves the current terminal layout
  */
 async function saveLayout() {
 	try {
-		// Capturar layout atual
+		// Capture current layout
 		const currentGroups = terminalManager.captureCurrentLayout();
 		const totalTerminals = currentGroups.reduce((sum, g) => sum + g.terminals.length, 0);
 
-		console.log('🔍 Terminais capturados:', currentGroups[0]?.terminals.map(t => t.name));
+		console.log('🔍 Captured terminals:', currentGroups[0]?.terminals.map(t => t.name));
 
 		if (totalTerminals === 0) {
 			const action = await vscode.window.showWarningMessage(
-				'⚠️ Nenhum terminal aberto. Deseja criar um layout vazio?',
-				'Sim',
-				'Não'
+				'⚠️ No open terminals. Do you want to create an empty layout?',
+				'Yes',
+				'No'
 			);
 
-			if (action !== 'Sim') {
+			if (action !== 'Yes') {
 				return;
 			}
 		}
 
-		// Mostrar ao usuário os terminais que serão salvos
+		// Show user the terminals that will be saved
 		let terminalNames = '';
 		if (totalTerminals > 0) {
 			terminalNames = currentGroups[0].terminals.map(t => t.name).join(', ');
 		}
 
-		// Solicitar nome do layout
+		// Request layout name
 		const name = await vscode.window.showInputBox({
 			prompt: totalTerminals > 0 
-				? `Salvando terminais: ${terminalNames} | Digite o nome do layout` 
-				: 'Digite o nome do layout',
-			placeHolder: 'Ex: Layout Dev',
+				? `Saving terminals: ${terminalNames} | Enter layout name` 
+				: 'Enter layout name',
+			placeHolder: 'Ex: Dev Layout',
 			validateInput: (value) => {
 				if (!value || value.trim().length === 0) {
-					return 'O nome do layout não pode estar vazio';
+					return 'Layout name cannot be empty';
 				}
 				return null;
 			},
@@ -79,38 +79,38 @@ async function saveLayout() {
 			return;
 		}
 
-		// Verificar se já existe um layout com esse nome
+		// Check if a layout with this name already exists
 		if (await storageService.layoutNameExists(name)) {
-			vscode.window.showErrorMessage(`❌ Já existe um layout com o nome "${name}"`);
+			vscode.window.showErrorMessage(`❌ A layout named "${name}" already exists`);
 			return;
 		}
 
-		// Perguntar ao usuário como organizar os terminais em grupos
+		// Ask user how to organize terminals into groups
 		let groups: TerminalGroup[];
 		
 		if (totalTerminals > 0) {
-			// Mostrar preview dos terminais
+			// Show terminal preview
 			vscode.window.showInformationMessage(
-				`📋 Organizando terminais: ${terminalNames}`
+				`📋 Organizing terminals: ${terminalNames}`
 			);
 
 			const organizedGroups = await organizeTerminalsIntoGroups(currentGroups[0].terminals);
 			if (!organizedGroups) {
-				return; // Usuário cancelou
+				return; // User cancelled
 			}
 			groups = organizedGroups;
-			console.log('🔍 Grupos organizados:', groups);
+			console.log('🔍 Organized groups:', groups);
 		} else {
 			groups = [];
 		}
 
-		// Solicitar descrição (opcional)
+		// Request description (optional)
 		const description = await vscode.window.showInputBox({
-			prompt: 'Digite uma descrição para o layout (opcional)',
-			placeHolder: 'Ex: Terminais do projeto X',
+			prompt: 'Enter a description for the layout (optional)',
+			placeHolder: 'Ex: Project X terminals',
 		});
 
-		// Criar layout
+		// Create layout
 		const layout: TerminalLayout = {
 			id: generateId(),
 			name: name.trim(),
@@ -120,20 +120,20 @@ async function saveLayout() {
 			updatedAt: new Date(),
 		};
 
-		// Salvar layout
+		// Save layout
 		await storageService.saveLayout(layout);
 
-		const groupsInfo = groups.length === 1 ? '1 grupo' : `${groups.length} grupos`;
+		const groupsInfo = groups.length === 1 ? '1 group' : `${groups.length} groups`;
 		vscode.window.showInformationMessage(
-			`✅ Layout "${layout.name}" salvo! ${totalTerminals} terminal(is) em ${groupsInfo}.`
+			`✅ Layout "${layout.name}" saved! ${totalTerminals} terminal(s) in ${groupsInfo}.`
 		);
 	} catch (error) {
-		handleError('Erro ao salvar layout', error);
+		handleError('Error saving layout', error);
 	}
 }
 
 /**
- * Carrega e aplica um layout salvo
+ * Loads and applies a saved layout
  */
 async function loadLayout() {
 	try {
@@ -141,35 +141,35 @@ async function loadLayout() {
 
 		if (layouts.length === 0) {
 			const action = await vscode.window.showInformationMessage(
-				'📭 Nenhum layout salvo ainda. Deseja criar um novo?',
-				'Criar Layout',
-				'Cancelar'
+				'📭 No saved layouts yet. Do you want to create a new one?',
+				'Create Layout',
+				'Cancel'
 			);
 
-			if (action === 'Criar Layout') {
+			if (action === 'Create Layout') {
 				await createLayout();
 			}
 			return;
 		}
 
-		// Criar lista de opções
+		// Create options list
 		const items = layouts.map(layout => {
 			const totalTerminals = layout.groups.reduce((sum, g) => sum + g.terminals.length, 0);
 			const groupsInfo = layout.groups.length === 1 
-				? '1 grupo' 
-				: `${layout.groups.length} grupos`;
+				? '1 group' 
+				: `${layout.groups.length} groups`;
 			
 			return {
 				label: `$(terminal) ${layout.name}`,
-				description: `${totalTerminals} terminal(is) em ${groupsInfo}`,
-				detail: layout.description || 'Sem descrição',
+				description: `${totalTerminals} terminal(s) in ${groupsInfo}`,
+				detail: layout.description || 'No description',
 				layout,
 			};
 		});
 
-		// Mostrar seletor
+		// Show selector
 		const selected = await vscode.window.showQuickPick(items, {
-			placeHolder: 'Selecione um layout para carregar',
+			placeHolder: 'Select a layout to load',
 			matchOnDescription: true,
 			matchOnDetail: true,
 		});
@@ -178,16 +178,16 @@ async function loadLayout() {
 			return;
 		}
 
-		// Perguntar se deve fechar terminais existentes
+		// Ask whether to close existing terminals
 		let closeExisting = false;
 		if (terminalManager.getOpenTerminalsCount() > 0) {
 			const action = await vscode.window.showQuickPick(
 				[
-					{ label: 'Manter terminais existentes', value: false },
-					{ label: 'Fechar terminais existentes', value: true },
+					{ label: 'Keep existing terminals', value: false },
+					{ label: 'Close existing terminals', value: true },
 				],
 				{
-					placeHolder: 'O que fazer com os terminais abertos?',
+					placeHolder: 'What to do with open terminals?',
 				}
 			);
 
@@ -198,51 +198,51 @@ async function loadLayout() {
 			closeExisting = action.value;
 		}
 
-		// Aplicar layout
+		// Apply layout
 		await terminalManager.applyLayout(selected.layout, closeExisting);
 	} catch (error) {
-		handleError('Erro ao carregar layout', error);
+		handleError('Error loading layout', error);
 	}
 }
 
 /**
- * Lista todos os layouts salvos
+ * Lists all saved layouts
  */
 async function listLayouts() {
 	try {
 		const layouts = await storageService.getAllLayouts();
 
 		if (layouts.length === 0) {
-			vscode.window.showInformationMessage('📭 Nenhum layout salvo ainda.');
+			vscode.window.showInformationMessage('📭 No saved layouts yet.');
 			return;
 		}
 
-		// Criar lista de opções com ações
+		// Create options list with actions
 		const items = layouts.map(layout => {
 			const totalTerminals = layout.groups.reduce((sum, g) => sum + g.terminals.length, 0);
 			const groupsInfo = layout.groups.length === 1 
-				? '1 grupo' 
-				: `${layout.groups.length} grupos`;
+				? '1 group' 
+				: `${layout.groups.length} groups`;
 			
 			return {
 				label: `$(terminal) ${layout.name}`,
-				description: `${totalTerminals} terminal(is) em ${groupsInfo}`,
-				detail: layout.description || 'Sem descrição',
+				description: `${totalTerminals} terminal(s) in ${groupsInfo}`,
+				detail: layout.description || 'No description',
 				layout,
 			};
 		});
 
-		// Adicionar opção para criar novo layout
+		// Add option to create new layout
 		items.unshift({
-			label: '$(add) Criar Novo Layout',
+			label: '$(add) Create New Layout',
 			description: '',
-			detail: 'Criar um novo layout de terminal',
+			detail: 'Create a new terminal layout',
 			layout: null as any,
 		});
 
-		// Mostrar seletor
+		// Show selector
 		const selected = await vscode.window.showQuickPick(items, {
-			placeHolder: 'Layouts salvos - Selecione para mais opções',
+			placeHolder: 'Saved layouts - Select for more options',
 			matchOnDescription: true,
 			matchOnDetail: true,
 		});
@@ -251,21 +251,21 @@ async function listLayouts() {
 			return;
 		}
 
-		// Se for criar novo layout
+		// If creating new layout
 		if (!selected.layout) {
 			await createLayout();
 			return;
 		}
 
-		// Mostrar opções para o layout selecionado
+		// Show options for selected layout
 		const action = await vscode.window.showQuickPick(
 			[
-				{ label: '$(play) Carregar', value: 'load' },
-				{ label: '$(edit) Editar', value: 'edit' },
-				{ label: '$(trash) Deletar', value: 'delete' },
+				{ label: '$(play) Load', value: 'load' },
+				{ label: '$(edit) Edit', value: 'edit' },
+				{ label: '$(trash) Delete', value: 'delete' },
 			],
 			{
-				placeHolder: `Ações para "${selected.layout.name}"`,
+				placeHolder: `Actions for "${selected.layout.name}"`,
 			}
 		);
 
@@ -273,7 +273,7 @@ async function listLayouts() {
 			return;
 		}
 
-		// Executar ação
+		// Execute action
 		switch (action.value) {
 			case 'load':
 				await terminalManager.applyLayout(selected.layout);
@@ -286,36 +286,36 @@ async function listLayouts() {
 				break;
 		}
 	} catch (error) {
-		handleError('Erro ao listar layouts', error);
+		handleError('Error listing layouts', error);
 	}
 }
 
 /**
- * Deleta um layout
+ * Deletes a layout
  */
 async function deleteLayout() {
 	try {
 		const layouts = await storageService.getAllLayouts();
 
 		if (layouts.length === 0) {
-			vscode.window.showInformationMessage('📭 Nenhum layout salvo para deletar.');
+			vscode.window.showInformationMessage('📭 No saved layouts to delete.');
 			return;
 		}
 
-		// Criar lista de opções
+		// Create options list
 		const items = layouts.map(layout => {
 			const totalTerminals = layout.groups.reduce((sum, g) => sum + g.terminals.length, 0);
 			return {
 				label: `$(trash) ${layout.name}`,
-				description: `${totalTerminals} terminal(is)`,
-				detail: layout.description || 'Sem descrição',
+				description: `${totalTerminals} terminal(s)`,
+				detail: layout.description || 'No description',
 				layout,
 			};
 		});
 
-		// Mostrar seletor
+		// Show selector
 		const selected = await vscode.window.showQuickPick(items, {
-			placeHolder: 'Selecione um layout para deletar',
+			placeHolder: 'Select a layout to delete',
 		});
 
 		if (!selected) {
@@ -324,69 +324,69 @@ async function deleteLayout() {
 
 		await deleteLayoutById(selected.layout.id);
 	} catch (error) {
-		handleError('Erro ao deletar layout', error);
+		handleError('Error deleting layout', error);
 	}
 }
 
 /**
- * Deleta um layout por ID
+ * Deletes a layout by ID
  */
 async function deleteLayoutById(id: string) {
 	const layout = await storageService.getLayout(id);
 	
 	if (!layout) {
-		vscode.window.showErrorMessage('❌ Layout não encontrado.');
+		vscode.window.showErrorMessage('❌ Layout not found.');
 		return;
 	}
 
-	// Confirmar exclusão
+	// Confirm deletion
 	const confirmation = await vscode.window.showWarningMessage(
-		`Tem certeza que deseja deletar o layout "${layout.name}"?`,
+		`Are you sure you want to delete the layout "${layout.name}"?`,
 		{ modal: true },
-		'Deletar',
-		'Cancelar'
+		'Delete',
+		'Cancel'
 	);
 
-	if (confirmation !== 'Deletar') {
+	if (confirmation !== 'Delete') {
 		return;
 	}
 
-	// Deletar layout
+	// Delete layout
 	const deleted = await storageService.deleteLayout(id);
 
 	if (deleted) {
-		vscode.window.showInformationMessage(`🗑️ Layout "${layout.name}" deletado com sucesso!`);
+		vscode.window.showInformationMessage(`🗑️ Layout "${layout.name}" deleted successfully!`);
 	} else {
-		vscode.window.showErrorMessage('❌ Erro ao deletar layout.');
+		vscode.window.showErrorMessage('❌ Error deleting layout.');
 	}
 }
 
 /**
- * Edita um layout existente
+ * Edits an existing layout
  */
 async function editLayout() {
 	try {
 		const layouts = await storageService.getAllLayouts();
 
 		if (layouts.length === 0) {
-			vscode.window.showInformationMessage('📭 Nenhum layout salvo para editar.');
+			vscode.window.showInformationMessage('📭 No saved layouts to edit.');
 			return;
 		}
 
-		// Criar lista de opções
+		// Create options list
 		const items = layouts.map(layout => {
 			const totalTerminals = layout.groups.reduce((sum, g) => sum + g.terminals.length, 0);
 			return {
 				label: `$(edit) ${layout.name}`,
-				description: `${totalTerminals} terminal(is)`,
-				detail: layout.description || 'Sem descrição',
+				description: `${totalTerminals} terminal(s)`,
+				detail: layout.description || 'No description',
 				layout,
 			};
 		});
 
-		// Mostrar seletor
+		// Show selector
 		const selected = await vscode.window.showQuickPick(items, {
-			placeHolder: 'Selecione um layout para editar',
+			placeHolder: 'Select a layout to edit',
 		});
 
 		if (!selected) {
@@ -395,30 +395,30 @@ async function editLayout() {
 
 		await editLayoutById(selected.layout.id);
 	} catch (error) {
-		handleError('Erro ao editar layout', error);
+		handleError('Error editing layout', error);
 	}
 }
 
 /**
- * Edita um layout por ID
+ * Edits a layout by ID
  */
 async function editLayoutById(id: string) {
 	const layout = await storageService.getLayout(id);
 	
 	if (!layout) {
-		vscode.window.showErrorMessage('❌ Layout não encontrado.');
+		vscode.window.showErrorMessage('❌ Layout not found.');
 		return;
 	}
 
-	// Mostrar opções de edição
+	// Show edit options
 	const action = await vscode.window.showQuickPick(
 		[
-			{ label: '$(pencil) Editar nome', value: 'name' },
-			{ label: '$(note) Editar descrição', value: 'description' },
-			{ label: '$(refresh) Atualizar com layout atual', value: 'update-layout' },
+			{ label: '$(pencil) Edit name', value: 'name' },
+			{ label: '$(note) Edit description', value: 'description' },
+			{ label: '$(refresh) Update with current layout', value: 'update-layout' },
 		],
 		{
-			placeHolder: `Editar layout "${layout.name}"`,
+			placeHolder: `Edit layout "${layout.name}"`,
 		}
 	);
 
@@ -440,15 +440,15 @@ async function editLayoutById(id: string) {
 }
 
 /**
- * Edita o nome de um layout
+ * Edits a layout's name
  */
 async function editLayoutName(layout: TerminalLayout) {
 	const newName = await vscode.window.showInputBox({
-		prompt: 'Digite o novo nome do layout',
+		prompt: 'Enter the new layout name',
 		value: layout.name,
 		validateInput: (value) => {
 			if (!value || value.trim().length === 0) {
-				return 'O nome do layout não pode estar vazio';
+				return 'Layout name cannot be empty';
 			}
 			return null;
 		},
@@ -458,22 +458,22 @@ async function editLayoutName(layout: TerminalLayout) {
 		return;
 	}
 
-	// Verificar se já existe um layout com esse nome
+	// Check if a layout with this name already exists
 	if (await storageService.layoutNameExists(newName, layout.id)) {
-		vscode.window.showErrorMessage(`❌ Já existe um layout com o nome "${newName}"`);
+		vscode.window.showErrorMessage(`❌ A layout named "${newName}" already exists`);
 		return;
 	}
 
 	await storageService.updateLayout(layout.id, { name: newName.trim() });
-	vscode.window.showInformationMessage(`✅ Nome atualizado para "${newName}"`);
+	vscode.window.showInformationMessage(`✅ Name updated to "${newName}"`);
 }
 
 /**
- * Edita a descrição de um layout
+ * Edits a layout's description
  */
 async function editLayoutDescription(layout: TerminalLayout) {
 	const newDescription = await vscode.window.showInputBox({
-		prompt: 'Digite a nova descrição do layout',
+		prompt: 'Enter the new layout description',
 		value: layout.description,
 	});
 
@@ -482,11 +482,11 @@ async function editLayoutDescription(layout: TerminalLayout) {
 	}
 
 	await storageService.updateLayout(layout.id, { description: newDescription.trim() });
-	vscode.window.showInformationMessage('✅ Descrição atualizada com sucesso!');
+	vscode.window.showInformationMessage('✅ Description updated successfully!');
 }
 
 /**
- * Atualiza o layout de um layout com os terminais atuais
+ * Updates a layout's structure with current terminals
  */
 async function updateLayoutStructure(layout: TerminalLayout) {
 	const currentGroups = terminalManager.captureCurrentLayout();
@@ -494,23 +494,23 @@ async function updateLayoutStructure(layout: TerminalLayout) {
 
 	if (totalTerminals === 0) {
 		const action = await vscode.window.showWarningMessage(
-			'⚠️ Nenhum terminal aberto. Deseja limpar o layout?',
-			'Sim',
-			'Não'
+			'⚠️ No open terminals. Do you want to clear the layout?',
+			'Yes',
+			'No'
 		);
 
-		if (action !== 'Sim') {
+		if (action !== 'Yes') {
 			return;
 		}
 	}
 
-	// Perguntar ao usuário como organizar os terminais em grupos
+	// Ask user how to organize terminals into groups
 	let groups: TerminalGroup[];
 	
 	if (totalTerminals > 0) {
 		const organizedGroups = await organizeTerminalsIntoGroups(currentGroups[0].terminals);
 		if (!organizedGroups) {
-			return; // Usuário cancelou
+			return; // User cancelled
 		}
 		groups = organizedGroups;
 	} else {
@@ -518,28 +518,28 @@ async function updateLayoutStructure(layout: TerminalLayout) {
 	}
 
 	await storageService.updateLayout(layout.id, { groups });
-	const groupsInfo = groups.length === 1 ? '1 grupo' : `${groups.length} grupos`;
+	const groupsInfo = groups.length === 1 ? '1 group' : `${groups.length} groups`;
 	vscode.window.showInformationMessage(
-		`✅ Layout atualizado! ${totalTerminals} terminal(is) em ${groupsInfo}.`
+		`✅ Layout updated! ${totalTerminals} terminal(s) in ${groupsInfo}.`
 	);
 }
 
 /**
- * Cria um novo layout do zero com interface assistida
+ * Creates a new layout from scratch with assisted interface
  */
 async function createLayout() {
 	try {
 		vscode.window.showInformationMessage(
-			'📝 Vamos criar um novo layout! Você pode adicionar grupos de terminais.'
+			'📝 Let\'s create a new layout! You can add terminal groups.'
 		);
 
-		// Solicitar nome do layout
+		// Request layout name
 		const name = await vscode.window.showInputBox({
-			prompt: 'Digite o nome do layout',
-			placeHolder: 'Ex: Desenvolvimento Full Stack',
+			prompt: 'Enter the layout name',
+			placeHolder: 'Ex: Full Stack Development',
 			validateInput: (value) => {
 				if (!value || value.trim().length === 0) {
-					return 'O nome do layout não pode estar vazio';
+					return 'Layout name cannot be empty';
 				}
 				return null;
 			},
@@ -549,25 +549,25 @@ async function createLayout() {
 			return;
 		}
 
-		// Verificar se já existe um layout com esse nome
+		// Check if a layout with this name already exists
 		if (await storageService.layoutNameExists(name)) {
-			vscode.window.showErrorMessage(`❌ Já existe um layout com o nome "${name}"`);
+			vscode.window.showErrorMessage(`❌ A layout named "${name}" already exists`);
 			return;
 		}
 
-		// Solicitar descrição (opcional)
+		// Request description (optional)
 		const description = await vscode.window.showInputBox({
-			prompt: 'Digite uma descrição para o layout (opcional)',
-			placeHolder: 'Ex: Terminal para desenvolvimento com frontend e backend',
+			prompt: 'Enter a description for the layout (optional)',
+			placeHolder: 'Ex: Terminal for development with frontend and backend',
 		});
 
-	// Adicionar terminais
+	// Add terminals
 	const terminals: TerminalConfig[] = [];
 	let addMore = true;
 
 	while (addMore) {
 		const terminalName = await vscode.window.showInputBox({
-			prompt: `Terminal ${terminals.length + 1}: Digite o nome`,
+			prompt: `Terminal ${terminals.length + 1}: Enter name`,
 			placeHolder: 'Ex: Backend Server',
 		});
 
@@ -578,12 +578,12 @@ async function createLayout() {
 		const profileName = await selectTerminalProfile();
 
 		const command = await vscode.window.showInputBox({
-			prompt: `Terminal "${terminalName}": Comando a executar (opcional)`,
+			prompt: `Terminal "${terminalName}": Command to execute (optional)`,
 			placeHolder: 'Ex: npm run dev',
 		});
 
 		const cwd = await vscode.window.showInputBox({
-			prompt: `Terminal "${terminalName}": Diretório de trabalho (opcional)`,
+			prompt: `Terminal "${terminalName}": Working directory (optional)`,
 			placeHolder: 'Ex: ./backend',
 		});
 
@@ -595,27 +595,27 @@ async function createLayout() {
 		});
 
 		const action = await vscode.window.showQuickPick(
-			['Adicionar mais um terminal', 'Finalizar'],
+			['Add another terminal', 'Finish'],
 			{
-				placeHolder: `${terminals.length} terminal(is) adicionado(s)`,
+				placeHolder: `${terminals.length} terminal(s) added`,
 			}
 		);
 
-		addMore = action === 'Adicionar mais um terminal';
+		addMore = action === 'Add another terminal';
 	}
 
 		if (terminals.length === 0) {
-			vscode.window.showWarningMessage('⚠️ Nenhum terminal adicionado. Layout não foi criado.');
+			vscode.window.showWarningMessage('⚠️ No terminals added. Layout was not created.');
 			return;
 		}
 
-		// Organizar terminais em grupos
+		// Organize terminals into groups
 		const groups = await organizeTerminalsIntoGroups(terminals);
 		if (!groups) {
-			return; // Usuário cancelou
+			return; // User cancelled
 		}
 
-		// Criar layout
+		// Create layout
 		const layout: TerminalLayout = {
 			id: generateId(),
 			name: name.trim(),
@@ -625,22 +625,22 @@ async function createLayout() {
 			updatedAt: new Date(),
 		};
 
-		// Salvar layout
+		// Save layout
 		await storageService.saveLayout(layout);
 
-		const groupsInfo = groups.length === 1 ? '1 grupo' : `${groups.length} grupos`;
+		const groupsInfo = groups.length === 1 ? '1 group' : `${groups.length} groups`;
 		vscode.window.showInformationMessage(
-			`✅ Layout "${layout.name}" criado! ${terminals.length} terminal(is) em ${groupsInfo}.`
+			`✅ Layout "${layout.name}" created! ${terminals.length} terminal(s) in ${groupsInfo}.`
 		);
 	} catch (error) {
-		handleError('Erro ao criar layout', error);
+		handleError('Error creating layout', error);
 	}
 }
 
 /**
- * Permite ao usuário organizar terminais em grupos (split layout)
- * @param terminals Lista de terminais a serem organizados
- * @returns Lista de grupos organizados ou undefined se cancelado
+ * Allows the user to organize terminals into groups (split layout)
+ * @param terminals List of terminals to be organized
+ * @returns List of organized groups or undefined if cancelled
  */
 async function organizeTerminalsIntoGroups(terminals: TerminalConfig[]): Promise<TerminalGroup[] | undefined> {
 	if (terminals.length === 0) {
@@ -648,14 +648,14 @@ async function organizeTerminalsIntoGroups(terminals: TerminalConfig[]): Promise
 	}
 
 	if (terminals.length === 1) {
-		// Apenas um terminal - um grupo
+		// Only one terminal - one group
 		return [{
 			id: 0,
 			terminals: [terminals[0]],
 		}];
 	}
 
-		// Mostrar os nomes dos terminais que serão organizados
+	// Show the names of terminals to be organized
 	const terminalNamesList = terminals.map((t, i) => {
 		let info = `  ${i + 1}. ${t.name}`;
 		if (t.profileName) {
@@ -664,37 +664,37 @@ async function organizeTerminalsIntoGroups(terminals: TerminalConfig[]): Promise
 		return info;
 	}).join('\n');
 	
-	// Perguntar ao usuário como organizar
+	// Ask user how to organize
 	const organizationMethod = await vscode.window.showQuickPick(
 		[
 			{
-				label: '$(layout) Cada terminal separado',
-				description: `${terminals.length} terminais independentes`,
-				detail: `Recreia: ${terminals.map(t => {
+				label: '$(layout) Each terminal separate',
+				description: `${terminals.length} independent terminals`,
+				detail: `Will create: ${terminals.map(t => {
 					const profile = t.profileName ? `(${t.profileName})` : '';
 					return `[${t.name}${profile}]`;
 				}).join(' ')}`,
 				value: 'separate',
 			},
 			{
-				label: '$(split-horizontal) Todos splitados (lado a lado)',
-				description: `${terminals.length} terminais juntos`,
-				detail: `Recreia: [${terminals.map(t => {
+				label: '$(split-horizontal) All split (side by side)',
+				description: `${terminals.length} terminals together`,
+				detail: `Will create: [${terminals.map(t => {
 					const profile = t.profileName ? `(${t.profileName})` : '';
 					return `${t.name}${profile}`;
 				}).join(' | ')}]`,
 				value: 'together',
 			},
 			{
-				label: '$(edit) Organizar manualmente os splits',
-				description: 'Você escolhe quais ficam lado a lado',
-				detail: 'Defina quais terminais ficam splitados juntos',
+				label: '$(edit) Manually organize splits',
+				description: 'You choose which ones stay side by side',
+				detail: 'Define which terminals are split together',
 				value: 'manual',
 			},
 		],
 		{
-			placeHolder: `⚠️ IMPORTANTE: Defina a estrutura de SPLITS dos terminais capturados`,
-			title: `Terminais: ${terminals.map(t => t.name).join(', ')}`,
+			placeHolder: `⚠️ IMPORTANT: Define the SPLIT structure of captured terminals`,
+			title: `Terminals: ${terminals.map(t => t.name).join(', ')}`,
 		}
 	);
 
@@ -704,32 +704,32 @@ async function organizeTerminalsIntoGroups(terminals: TerminalConfig[]): Promise
 
 	switch (organizationMethod.value) {
 		case 'separate':
-			// Cada terminal em seu próprio grupo
+			// Each terminal in its own group
 			const separateGroups = terminals.map((terminal, index) => ({
 				id: index,
 				terminals: [terminal],
 			}));
-			console.log('🔷 Organização SEPARADA criada:', separateGroups.length, 'grupos');
+			console.log('🔷 SEPARATE organization created:', separateGroups.length, 'groups');
 			separateGroups.forEach((g, i) => {
-				console.log(`  Grupo ${i + 1}:`, g.terminals.map(t => t.name));
+				console.log(`  Group ${i + 1}:`, g.terminals.map(t => t.name));
 			});
 			return separateGroups;
 
 		case 'together':
-			// Todos em um grupo
+			// All in one group
 			const togetherGroup = [{
 				id: 0,
 				terminals: terminals,
 			}];
-			console.log('🔷 Organização JUNTOS criada: 1 grupo com', terminals.length, 'terminais');
+			console.log('🔷 TOGETHER organization created: 1 group with', terminals.length, 'terminals');
 			return togetherGroup;
 
 		case 'manual':
 			const manualGroups = await organizeTerminalsManually(terminals);
 			if (manualGroups) {
-				console.log('🔷 Organização MANUAL criada:', manualGroups.length, 'grupos');
+				console.log('🔷 MANUAL organization created:', manualGroups.length, 'groups');
 				manualGroups.forEach((g, i) => {
-					console.log(`  Grupo ${i + 1}:`, g.terminals.map(t => t.name));
+					console.log(`  Group ${i + 1}:`, g.terminals.map(t => t.name));
 				});
 			}
 			return manualGroups;
@@ -740,7 +740,7 @@ async function organizeTerminalsIntoGroups(terminals: TerminalConfig[]): Promise
 }
 
 /**
- * Permite ao usuário organizar terminais manualmente em grupos
+ * Allows the user to manually organize terminals into groups
  */
 async function organizeTerminalsManually(terminals: TerminalConfig[]): Promise<TerminalGroup[] | undefined> {
 	const groups: TerminalGroup[] = [];
@@ -748,13 +748,13 @@ async function organizeTerminalsManually(terminals: TerminalConfig[]): Promise<T
 	let groupId = 0;
 
 	vscode.window.showInformationMessage(
-		'💡 Terminais no mesmo grupo = SPLITADOS (lado a lado) | Grupos diferentes = SEPARADOS'
+		'💡 Terminals in the same group = SPLIT (side by side) | Different groups = SEPARATE'
 	);
 
 	while (availableTerminals.length > 0) {
-		// Mostrar terminais disponíveis
+		// Show available terminals
 		const terminalItems = availableTerminals.map((terminal, index) => {
-			let description = terminal.cwd || 'Terminal capturado';
+			let description = terminal.cwd || 'Captured terminal';
 			if (terminal.profileName) {
 				description = `${terminal.profileName} | ${description}`;
 			}
@@ -769,30 +769,30 @@ async function organizeTerminalsManually(terminals: TerminalConfig[]): Promise<T
 
 		const groupNumber = groups.length + 1;
 		const groupsCreatedInfo = groups.length > 0 
-			? ` | ${groups.length} grupo(s) criado(s)` 
+			? ` | ${groups.length} group(s) created` 
 			: '';
 		
 		const selected = await vscode.window.showQuickPick(terminalItems, {
-			placeHolder: `Grupo ${groupNumber}: Selecione terminais que ficarão LADO A LADO (Ctrl+Click para múltiplos)${groupsCreatedInfo}`,
+			placeHolder: `Group ${groupNumber}: Select terminals that will be SIDE BY SIDE (Ctrl+Click for multiple)${groupsCreatedInfo}`,
 			canPickMany: true,
-			title: `${availableTerminals.length} terminal(is) restante(s) para organizar`,
+			title: `${availableTerminals.length} terminal(s) remaining to organize`,
 		});
 
 		if (!selected || selected.length === 0) {
-			// Se não selecionou nada e ainda há terminais, criar grupos individuais
+			// If nothing selected and there are still terminals, create individual groups
 			if (availableTerminals.length > 0) {
 				const action = await vscode.window.showQuickPick(
 					[
-						{ label: 'Criar grupos individuais para o restante', value: 'individual' },
-						{ label: 'Cancelar criação de layout', value: 'cancel' },
+						{ label: 'Create individual groups for the rest', value: 'individual' },
+						{ label: 'Cancel layout creation', value: 'cancel' },
 					],
 					{
-						placeHolder: `${availableTerminals.length} terminal(is) ainda não agrupado(s)`,
+						placeHolder: `${availableTerminals.length} terminal(s) still not grouped`,
 					}
 				);
 
 				if (action?.value === 'individual') {
-					// Criar um grupo para cada terminal restante
+					// Create one group for each remaining terminal
 					availableTerminals.forEach(terminal => {
 						groups.push({
 							id: groupId++,
@@ -801,20 +801,20 @@ async function organizeTerminalsManually(terminals: TerminalConfig[]): Promise<T
 					});
 					break;
 				} else {
-					return undefined; // Cancelar
+					return undefined; // Cancel
 				}
 			}
 			break;
 		}
 
-		// Criar grupo com terminais selecionados
+		// Create group with selected terminals
 		const groupTerminals = selected.map(item => item.terminal);
 		groups.push({
 			id: groupId++,
 			terminals: groupTerminals,
 		});
 
-		// Remover terminais selecionados da lista de disponíveis
+		// Remove selected terminals from available list
 		selected.forEach(item => {
 			const index = availableTerminals.findIndex(t => t === item.terminal);
 			if (index !== -1) {
@@ -822,17 +822,17 @@ async function organizeTerminalsManually(terminals: TerminalConfig[]): Promise<T
 			}
 		});
 
-		// Se ainda há terminais, perguntar se quer adicionar mais grupos
+		// If there are still terminals, ask if want to add more groups
 		if (availableTerminals.length > 0) {
 			const continueAction = await vscode.window.showQuickPick(
-				['Adicionar mais um grupo', 'Finalizar (criar grupos individuais para o restante)'],
+				['Add another group', 'Finish (create individual groups for the rest)'],
 				{
-					placeHolder: `Grupo ${groupNumber} criado com ${groupTerminals.length} terminal(is). ${availableTerminals.length} restante(s).`,
+					placeHolder: `Group ${groupNumber} created with ${groupTerminals.length} terminal(s). ${availableTerminals.length} remaining.`,
 				}
 			);
 
-			if (continueAction !== 'Adicionar mais um grupo') {
-				// Criar um grupo para cada terminal restante
+			if (continueAction !== 'Add another group') {
+				// Create one group for each remaining terminal
 				availableTerminals.forEach(terminal => {
 					groups.push({
 						id: groupId++,
@@ -848,23 +848,23 @@ async function organizeTerminalsManually(terminals: TerminalConfig[]): Promise<T
 }
 
 /**
- * Obtém os perfis de terminal disponíveis
+ * Gets available terminal profiles
  */
 async function getAvailableTerminalProfiles(): Promise<Array<{ label: string; profileName: string | undefined }>> {
-	// Obter perfis configurados
+	// Get configured profiles
 	const config = vscode.workspace.getConfiguration('terminal.integrated.profiles');
 	const profiles: Array<{ label: string; profileName: string | undefined }> = [
-		{ label: '$(terminal) Padrão do Sistema', profileName: undefined }
+		{ label: '$(terminal) System Default', profileName: undefined }
 	];
 
-	// Detectar plataforma
+	// Detect platform
 	const platform = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
 	const platformProfiles = config.get<Record<string, any>>(platform);
 
-	console.log(`🔍 Detectando perfis de terminal (Plataforma: ${platform})`);
+	console.log(`🔍 Detecting terminal profiles (Platform: ${platform})`);
 	
 	if (platformProfiles) {
-		console.log(`📋 Perfis encontrados:`, Object.keys(platformProfiles));
+		console.log(`📋 Profiles found:`, Object.keys(platformProfiles));
 		
 		Object.keys(platformProfiles).forEach(profileName => {
 			const profile = platformProfiles[profileName];
@@ -874,7 +874,7 @@ async function getAvailableTerminalProfiles(): Promise<Array<{ label: string; pr
 				hasArgs: !!profile.args
 			});
 			
-			// Adicionar perfil com ícone apropriado
+			// Add profile with appropriate icon
 			let icon = '$(terminal)';
 			if (profileName.toLowerCase().includes('powershell')) {
 				icon = '$(terminal-powershell)';
@@ -890,35 +890,35 @@ async function getAvailableTerminalProfiles(): Promise<Array<{ label: string; pr
 			});
 		});
 	} else {
-		console.log(`⚠️ Nenhum perfil encontrado para a plataforma ${platform}`);
+		console.log(`⚠️ No profiles found for platform ${platform}`);
 	}
 
 	return profiles;
 }
 
 /**
- * Permite ao usuário selecionar um perfil de terminal
+ * Allows the user to select a terminal profile
  */
 async function selectTerminalProfile(): Promise<string | undefined> {
 	const profiles = await getAvailableTerminalProfiles();
 	
 	const selected = await vscode.window.showQuickPick(profiles, {
-		placeHolder: 'Selecione o perfil do terminal (opcional)',
-		title: 'Perfil do Terminal'
+		placeHolder: 'Select terminal profile (optional)',
+		title: 'Terminal Profile'
 	});
 
 	return selected?.profileName;
 }
 
 /**
- * Gera um ID único
+ * Generates a unique ID
  */
 function generateId(): string {
 	return crypto.randomBytes(16).toString('hex');
 }
 
 /**
- * Trata erros de forma centralizada
+ * Handles errors centrally
  */
 function handleError(message: string, error: any) {
 	console.error(message, error);
@@ -926,8 +926,8 @@ function handleError(message: string, error: any) {
 }
 
 /**
- * Desativa a extensão
+ * Deactivates the extension
  */
 export function deactivate() {
-	console.log('👋 Extensão MFA Terminal desativada');
+	console.log('👋 MFA Terminal extension deactivated');
 }
