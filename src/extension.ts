@@ -85,30 +85,50 @@ async function saveLayout() {
 			return;
 		}
 
-		// Ask user how to organize terminals into groups
-		let groups: TerminalGroup[];
-		
-		if (totalTerminals > 0) {
-			// Show terminal preview
-			vscode.window.showInformationMessage(
-				`📋 Organizing terminals: ${terminalNames}`
-			);
+	// Ask user how to organize terminals into groups
+	let groups: TerminalGroup[];
+	
+	if (totalTerminals > 0) {
+		// Show terminal preview
+		vscode.window.showInformationMessage(
+			`📋 Organizing terminals: ${terminalNames}`
+		);
 
-			const organizedGroups = await organizeTerminalsIntoGroups(currentGroups[0].terminals);
-			if (!organizedGroups) {
-				return; // User cancelled
+		const organizedGroups = await organizeTerminalsIntoGroups(currentGroups[0].terminals);
+		if (!organizedGroups) {
+			return; // User cancelled
+		}
+		groups = organizedGroups;
+		console.log('🔍 Organized groups:', groups);
+
+		// Ask if user wants to customize appearance (colors/icons)
+		const customizeAppearance = await vscode.window.showQuickPick(
+			[
+				{ label: '$(check) Yes, customize colors/icons', value: true },
+				{ label: '$(x) No, use defaults', value: false },
+			],
+			{
+				placeHolder: 'Do you want to customize the appearance of terminals?',
 			}
-			groups = organizedGroups;
-			console.log('🔍 Organized groups:', groups);
-		} else {
-			groups = [];
+		);
+
+		if (customizeAppearance === undefined) {
+			return; // User cancelled
 		}
 
-		// Request description (optional)
-		const description = await vscode.window.showInputBox({
-			prompt: 'Enter a description for the layout (optional)',
-			placeHolder: 'Ex: Project X terminals',
-		});
+		// If yes, customize each terminal
+		if (customizeAppearance.value) {
+			await customizeTerminalsAppearance(groups);
+		}
+	} else {
+		groups = [];
+	}
+
+	// Request description (optional)
+	const description = await vscode.window.showInputBox({
+		prompt: 'Enter a description for the layout (optional)',
+		placeHolder: 'Ex: Project X terminals',
+	});
 
 		// Create layout
 		const layout: TerminalLayout = {
@@ -513,6 +533,26 @@ async function updateLayoutStructure(layout: TerminalLayout) {
 			return; // User cancelled
 		}
 		groups = organizedGroups;
+
+		// Ask if user wants to customize appearance (colors/icons)
+		const customizeAppearance = await vscode.window.showQuickPick(
+			[
+				{ label: '$(check) Yes, customize colors/icons', value: true },
+				{ label: '$(x) No, keep current/use defaults', value: false },
+			],
+			{
+				placeHolder: 'Do you want to customize the appearance of terminals?',
+			}
+		);
+
+		if (customizeAppearance === undefined) {
+			return; // User cancelled
+		}
+
+		// If yes, customize each terminal
+		if (customizeAppearance.value) {
+			await customizeTerminalsAppearance(groups);
+		}
 	} else {
 		groups = [];
 	}
@@ -609,29 +649,49 @@ async function createLayout() {
 			return;
 		}
 
-		// Organize terminals into groups
-		const groups = await organizeTerminalsIntoGroups(terminals);
-		if (!groups) {
-			return; // User cancelled
+	// Organize terminals into groups
+	const groups = await organizeTerminalsIntoGroups(terminals);
+	if (!groups) {
+		return; // User cancelled
+	}
+
+	// Ask if user wants to customize appearance (colors/icons)
+	const customizeAppearance = await vscode.window.showQuickPick(
+		[
+			{ label: '$(check) Yes, customize colors/icons', value: true },
+			{ label: '$(x) No, use defaults', value: false },
+		],
+		{
+			placeHolder: 'Do you want to customize the appearance of terminals?',
 		}
+	);
 
-		// Create layout
-		const layout: TerminalLayout = {
-			id: generateId(),
-			name: name.trim(),
-			description: description?.trim(),
-			groups,
-			createdAt: new Date(),
-			updatedAt: new Date(),
-		};
+	if (customizeAppearance === undefined) {
+		return; // User cancelled
+	}
 
-		// Save layout
-		await storageService.saveLayout(layout);
+	// If yes, customize each terminal
+	if (customizeAppearance.value) {
+		await customizeTerminalsAppearance(groups);
+	}
 
-		const groupsInfo = groups.length === 1 ? '1 group' : `${groups.length} groups`;
-		vscode.window.showInformationMessage(
-			`✅ Layout "${layout.name}" created! ${terminals.length} terminal(s) in ${groupsInfo}.`
-		);
+	// Create layout
+	const layout: TerminalLayout = {
+		id: generateId(),
+		name: name.trim(),
+		description: description?.trim(),
+		groups,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	};
+
+	// Save layout
+	await storageService.saveLayout(layout);
+
+	const groupsInfo = groups.length === 1 ? '1 group' : `${groups.length} groups`;
+	vscode.window.showInformationMessage(
+		`✅ Layout "${layout.name}" created! ${terminals.length} terminal(s) in ${groupsInfo}.`
+	);
 	} catch (error) {
 		handleError('Error creating layout', error);
 	}
@@ -908,6 +968,121 @@ async function selectTerminalProfile(): Promise<string | undefined> {
 	});
 
 	return selected?.profileName;
+}
+
+/**
+ * Customizes the appearance (colors and icons) of terminals in groups
+ */
+async function customizeTerminalsAppearance(groups: TerminalGroup[]): Promise<void> {
+	// Count total terminals
+	const totalTerminals = groups.reduce((sum, g) => sum + g.terminals.length, 0);
+	let currentTerminalIndex = 0;
+
+	// Iterate through each group and each terminal
+	for (const group of groups) {
+		for (const terminal of group.terminals) {
+			currentTerminalIndex++;
+			
+		// Show color picker for this terminal
+		const colorChoice = await vscode.window.showQuickPick(
+			[
+				{ label: '🔵 Blue', description: 'Azul padrão', value: 'terminal.ansiBlue' },
+				{ label: '🔷 Bright Blue', description: 'Azul claro', value: 'terminal.ansiBrightBlue' },
+				{ label: '🟢 Green', description: 'Verde padrão', value: 'terminal.ansiGreen' },
+				{ label: '💚 Bright Green', description: 'Verde claro', value: 'terminal.ansiBrightGreen' },
+				{ label: '🟡 Yellow', description: 'Amarelo padrão', value: 'terminal.ansiYellow' },
+				{ label: '💛 Bright Yellow', description: 'Amarelo claro', value: 'terminal.ansiBrightYellow' },
+				{ label: '🔴 Red', description: 'Vermelho padrão', value: 'terminal.ansiRed' },
+				{ label: '❤️ Bright Red', description: 'Vermelho claro', value: 'terminal.ansiBrightRed' },
+				{ label: '🟣 Magenta', description: 'Magenta padrão', value: 'terminal.ansiMagenta' },
+				{ label: '💜 Bright Magenta', description: 'Magenta claro', value: 'terminal.ansiBrightMagenta' },
+				{ label: '🩵 Cyan', description: 'Ciano padrão', value: 'terminal.ansiCyan' },
+				{ label: '🔵 Bright Cyan', description: 'Ciano claro', value: 'terminal.ansiBrightCyan' },
+				{ label: '⚫ Black', description: 'Preto', value: 'terminal.ansiBlack' },
+				{ label: '⚪ White', description: 'Branco', value: 'terminal.ansiWhite' },
+				{ label: '⭕ Default', description: 'Sem cor personalizada', value: undefined },
+			],
+			{
+				placeHolder: `Terminal ${currentTerminalIndex}/${totalTerminals}: "${terminal.name}" - Escolha uma cor`,
+				title: `🎨 Personalizar Aparência (${currentTerminalIndex}/${totalTerminals})`,
+			}
+		);
+
+			if (colorChoice === undefined) {
+				// User pressed ESC - ask if want to cancel or skip customization
+				const action = await vscode.window.showQuickPick(
+					[
+						{ label: '$(arrow-right) Skip remaining customizations', value: 'skip' },
+						{ label: '$(x) Cancel layout creation', value: 'cancel' },
+					],
+					{
+						placeHolder: 'Do you want to skip the remaining customizations or cancel?',
+					}
+				);
+
+				if (action?.value === 'cancel') {
+					throw new Error('Layout creation cancelled by user');
+				}
+				// If 'skip', break out of loops
+				return;
+			}
+
+			// Apply color
+			if (colorChoice.value) {
+				terminal.color = colorChoice.value;
+			}
+
+		// Ask for icon (optional)
+		const iconChoice = await vscode.window.showQuickPick(
+			[
+				{ label: '$(terminal) Terminal (padrão)', value: undefined },
+				{ label: '$(code) Code', value: 'code' },
+				{ label: '$(server) Server', value: 'server' },
+				{ label: '$(database) Database', value: 'database' },
+				{ label: '$(bug) Debug', value: 'bug' },
+				{ label: '$(rocket) Build/Deploy', value: 'rocket' },
+				{ label: '$(package) Package Manager', value: 'package' },
+				{ label: '$(beaker) Test', value: 'beaker' },
+				{ label: '$(tools) Tools', value: 'tools' },
+				{ label: '$(globe) Web/API', value: 'globe' },
+				{ label: '$(file) File Operations', value: 'file' },
+				{ label: '$(git-branch) Git', value: 'git-branch' },
+				{ label: '$(play) Run', value: 'play' },
+				{ label: '$(watch) Watch Mode', value: 'watch' },
+			],
+			{
+				placeHolder: `Terminal "${terminal.name}" - Escolha um ícone (opcional)`,
+				title: `🎯 Seleção de Ícone (${currentTerminalIndex}/${totalTerminals})`,
+			}
+		);
+
+			if (iconChoice === undefined) {
+				// User pressed ESC - ask if want to skip remaining
+				const action = await vscode.window.showQuickPick(
+					[
+						{ label: '$(arrow-right) Skip remaining customizations', value: 'skip' },
+						{ label: '$(x) Cancel layout creation', value: 'cancel' },
+					],
+					{
+						placeHolder: 'Do you want to skip the remaining customizations or cancel?',
+					}
+				);
+
+				if (action?.value === 'cancel') {
+					throw new Error('Layout creation cancelled by user');
+				}
+				// If 'skip', break out of loops
+				return;
+			}
+
+			// Apply icon
+			if (iconChoice.value) {
+				terminal.icon = iconChoice.value;
+			}
+		}
+	}
+
+	vscode.window.showInformationMessage('✅ Terminal appearance customized!');
 }
 
 /**

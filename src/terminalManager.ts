@@ -129,19 +129,29 @@ export class TerminalManager {
 				
 				await this.delay(100);
 				
-				// Create terminal with profile
-				const terminalOptions: vscode.TerminalOptions = {
-					name: config.name,
-					env: config.env,
-				};
-				
-				// Add cwd if specified
-				if (config.cwd) {
-					const resolvedPath = this.resolvePath(config.cwd);
-					if (resolvedPath && fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory()) {
-						terminalOptions.cwd = resolvedPath;
-					}
+			// Create terminal with profile
+			const terminalOptions: vscode.TerminalOptions = {
+				name: config.name,
+				env: config.env,
+			};
+			
+			// Add cwd if specified
+			if (config.cwd) {
+				const resolvedPath = this.resolvePath(config.cwd);
+				if (resolvedPath && fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isDirectory()) {
+					terminalOptions.cwd = resolvedPath;
 				}
+			}
+
+			// Add icon if specified
+			if (config.icon) {
+				terminalOptions.iconPath = new vscode.ThemeIcon(config.icon);
+			}
+
+			// Add color if specified
+			if (config.color) {
+				terminalOptions.color = new vscode.ThemeColor(config.color);
+			}
 				
 				console.log(`✅ Creating terminal with options:`, terminalOptions);
 				terminal = vscode.window.createTerminal(terminalOptions);
@@ -202,6 +212,16 @@ export class TerminalManager {
 					);
 				}
 			}
+		}
+
+		// Add icon if specified
+		if (config.icon) {
+			terminalOptions.iconPath = new vscode.ThemeIcon(config.icon);
+		}
+
+		// Add color if specified
+		if (config.color) {
+			terminalOptions.color = new vscode.ThemeColor(config.color);
 		}
 
 		return vscode.window.createTerminal(terminalOptions);
