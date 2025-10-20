@@ -78,20 +78,40 @@ export class TerminalManager {
 			const terminals = vscode.window.terminals;
 			const newTerminal = terminals[terminals.length - 1];
 			
-			if (newTerminal) {
-				console.log(`    ✅ Split terminal created, renaming to "${terminalConfig.name}"`);
+		if (newTerminal) {
+			console.log(`    ✅ Split terminal created, renaming to "${terminalConfig.name}"`);
+			
+			// Rename terminal
+			await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
+				name: terminalConfig.name
+			});
+			
+		// Change directory if specified (split inherits parent directory)
+		if (terminalConfig.cwd) {
+			const resolvedPath = this.resolvePath(terminalConfig.cwd);
+			if (resolvedPath) {
+				await this.delay(300);
+				console.log(`    📁 Changing directory to: ${resolvedPath}`);
 				
-				// Rename terminal
-				await vscode.commands.executeCommand('workbench.action.terminal.renameWithArg', {
-					name: terminalConfig.name
-				});
-				
-				// Execute command if specified
-				if (terminalConfig.command) {
-					await this.delay(300);
-					newTerminal.sendText(terminalConfig.command);
+				// For Windows, check if we need to change drive first
+				if (process.platform === 'win32' && resolvedPath.match(/^[A-Za-z]:/)) {
+					const drive = resolvedPath.substring(0, 2); // Ex: "C:"
+					// Send drive change command first (works in CMD and PowerShell)
+					newTerminal.sendText(drive);
+					await this.delay(100);
 				}
+				
+				// Then send cd command (works universally)
+				newTerminal.sendText(`cd "${resolvedPath}"`);
 			}
+		}
+			
+			// Execute command if specified
+			if (terminalConfig.command) {
+				await this.delay(300);
+				newTerminal.sendText(terminalConfig.command);
+			}
+		}
 			
 			await this.delay(200);
 		}
